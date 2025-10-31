@@ -1,4 +1,5 @@
 from flask import Flask, request, jsonify
+import requests
 
 app = Flask(__name__)
 
@@ -15,15 +16,30 @@ def like():
     if not uid:
         return jsonify({"error": "Missing UID"})
     
-    # ----- Giả lập dữ liệu API -----
-    player_name = "FB:ㅤ@GMRemyX"  # bạn có thể thay thành dữ liệu thật nếu có API riêng
-    likes_before = 1000
-    likes_after = 1020
-    given = likes_after - likes_before
+    # ---- API nguồn thật của bạn ----
+    # Bạn có thể đổi API này sang API FreeFire bạn dùng thật
+    api_url = f"https://vduy-like-ff.vercel.app/like?uid{uid} "
+    
+    try:
+        r = requests.get(api_url, timeout=10)
+        data = r.json()
+    except Exception as e:
+        return jsonify({"error": f"Failed to fetch data: {str(e)}"})
+
+    # ---- Kiểm tra dữ liệu trả về ----
+    if "LikesAfterCommand" not in data:
+        return jsonify({"error": "Invalid UID or API returned no data", "raw": data})
+    
+    # ---- Trích xuất dữ liệu thật ----
+    uid = data.get("UID", uid)
+    name = data.get("PlayerNickname", "Unknown")
+    likes_before = data.get("LikesBeforeCommand", 0)
+    likes_after = data.get("LikesAfterCommand", 0)
+    given = data.get("LikesGivenByAPI", 0)
 
     return jsonify({
         "UID": uid,
-        "Name": player_name,
+        "Name": name,
         "LikesBefore": likes_before,
         "LikesAfter": likes_after,
         "GivenByAPI": given,
